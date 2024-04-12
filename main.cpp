@@ -181,7 +181,6 @@ int main() {
 //            std::cerr << "Failed to receive data" << std::endl;
 //            return 4;
 //        }
-
         std::cout << buf << std::endl;
     }
 
