@@ -3,7 +3,7 @@
 //
 
 #ifdef _WIN32
-    #include <winsock2.h>
+#include <winsock2.h>
 #else
 #include <netdb.h>
 #include <sys/socket.h>
@@ -34,12 +34,13 @@ int SendPacket(const char* buf) {
     return len;
 }
 
-int RecvPacket(char** buf) {
+int RecvPacket(char* buf) {
     int len;
+//    char buf[1000000];
     do {
-        len = SSL_read(ssl, reinterpret_cast<void *>(buf), 100);
-        buf[len] = nullptr;
-        printf("%s\n", *buf);
+        len = SSL_read(ssl, buf, 100);
+        buf[len] = 0;
+        printf("%s\n", buf);
 //        fprintf(fp, "%s",buf);
     } while (len > 0);
     if (len < 0) {
@@ -96,7 +97,7 @@ int main() {
 //    ssize_t                 byte_c;
     struct addrinfo         hints{};
     struct addrinfo*        result;
-    char*                   buf[_buffer_size];
+    char                    buf[_buffer_size];
 //    const char*             header;
 
     memset(&hints, 0, sizeof(hints));
@@ -111,7 +112,7 @@ int main() {
         std::cerr << "Failed to get address information" << std::endl;
         return 1;
     } else {
-//        char ip[INET6_ADDRSTRLEN];
+        char ip[INET6_ADDRSTRLEN];
 //        for(addrinfo* addr = result; addr; addr = addr->ai_next) {
 //            std::cout << "Output for each addr info from address: ";
 //            std::cout << inet_ntop(addr->ai_family, &reinterpret_cast<sockaddr_in*>(addr->ai_addr)->sin_addr, ip, sizeof(ip)) << "\n";
@@ -141,7 +142,7 @@ int main() {
 
 //  Set the SSL socket and start the connection
         ssl_sock = SSL_get_fd(ssl);
-        SSL_set_fd(ssl, ssl_sock);
+        SSL_set_fd(ssl, sock);
         int ssl_ret = SSL_connect(ssl);
         if (ssl_ret <= 0) {
             int err = SSL_get_error(ssl, ssl_ret);
@@ -158,6 +159,7 @@ int main() {
 
 //  Send the header request and receive the response
         const char* request = "GET https://xkcd.com/rss.xml HTTP/1.1\n"
+                              "Host: xkcd.com\n"
                               "\n";
         do {
             sp = SendPacket(request);
