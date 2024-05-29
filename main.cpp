@@ -12,6 +12,11 @@
 #include <iostream>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 SSL* ssl;
 #endif
@@ -92,11 +97,11 @@ void log_ssl()
 int main() {
     int                     _buffer_size = 1000000;
 
-    int                     s, sock, cur_con, ssl_sock, sp, rp;
+    int                     s, sock, cur_con, ssl_sock, sp, recp, sfd;
 //    int                     send_success;
 //    ssize_t                 byte_c;
     struct addrinfo         hints{};
-    struct addrinfo*        result;
+    struct addrinfo        *result, *rp;
     char                    buf[_buffer_size];
 //    const char*             header;
 
@@ -112,13 +117,20 @@ int main() {
         std::cerr << "Failed to get address information" << std::endl;
         return 1;
     } else {
-        char ip[INET6_ADDRSTRLEN];
+      for (rp = result; rp != NULL; rp = rp->ai_next) {
+        sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+          if (sfd == -1) continue;
+          if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0) break; /* Success */
+          close(sfd);
+      }
+      freeaddrinfo(result);
+//        char ip[INET6_ADDRSTRLEN];
 //        for(addrinfo* addr = result; addr; addr = addr->ai_next) {
 //            std::cout << "Output for each addr info from address: ";
 //            std::cout << inet_ntop(addr->ai_family, &reinterpret_cast<sockaddr_in*>(addr->ai_addr)->sin_addr, ip, sizeof(ip)) << "\n";
 //        }
-        sock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-        cur_con = connect(sock, result->ai_addr, result->ai_addrlen);
+        sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        cur_con = connect(sock, rp->ai_addr, rp->ai_addrlen);
         if(cur_con != 0) {
             std::cerr << "Failed to connect to socket" << std::endl;
             return 2;
@@ -141,7 +153,7 @@ int main() {
         }
 
 //  Set the SSL socket and start the connection
-        ssl_sock = SSL_get_fd(ssl);
+//        ssl_sock = SSL_get_fd(ssl);
         SSL_set_fd(ssl, sock);
         int ssl_ret = SSL_connect(ssl);
         if (ssl_ret <= 0) {
@@ -165,8 +177,8 @@ int main() {
             sp = SendPacket(request);
         } while(sp <= 0);
         do {
-            rp = RecvPacket(buf);
-        } while(rp != 0);
+            recp = RecvPacket(buf);
+        } while(recp != 0);
 
 /** HTTP Socket and Connection */
 //        header = "GET /rss.xml HTTP/1.1\n"
@@ -186,6 +198,6 @@ int main() {
         std::cout << buf << std::endl;
     }
 
-    freeaddrinfo(result);
+    freeaddrinfo(rp);
     return 0;
 }
