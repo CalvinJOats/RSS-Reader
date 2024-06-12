@@ -253,7 +253,7 @@ int XML_Get (int argc, char *argv[]){
     ctitle = output.substr(output.find("<item>") + 13, (output.find("</title>") - (output.find("<item>") + 13)));  // Find the title of the comic
     ctitle = ctitle.substr(0, ctitle.find("</title>")); // Not sure why the first substring did not end. This gets the end of the title
 
-    cimg_start = "<image ";
+    cimg_start = "\n<image ";
     cimage = output.substr(output.find("src=\""),  (output.find("\" title=") - (output.find("src=\""))));   // Find the image link for the comic
     cimage = cimg_start.append(cimage);
     cimage = cimage.append("\" ");
