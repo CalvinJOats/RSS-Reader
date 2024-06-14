@@ -14,6 +14,7 @@
  */
 
 /* Include the appropriate header file for SOCK_STREAM */
+#include <cstdlib>
 #ifdef _WIN32 /* Windows */
 # include <winsock2.h>
 #else /* Linux/Unix */
@@ -27,6 +28,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <sstream>
+
+std::string imgurl;
 
 /* Helper function to create a BIO connected to the server */
 static BIO *create_socket_bio(const char *hostname, const char *port, int family)
@@ -106,11 +109,12 @@ int XML_Get (int argc, char *argv[]){
     BIO *bio = nullptr;
     int res = EXIT_FAILURE;
     int ret;
-    const char *request_start = "GET /rss.xml HTTP/1.1\r\nConnection: close\r\nHost: ";
+    const char *request_start = "GET ";
+    const char *request_mid = " HTTP/1.1\r\nConnection: close\r\nHost: ";
     const char *request_end = "\r\n\r\n";
     size_t written, readbytes;
     char buf[160];
-    char *hostname, *port;
+    char *hostname, *port, *item, *request_open;
     int argnext = 1;
     int ipv6 = 0;
     std::stringstream ss;
@@ -131,7 +135,8 @@ int XML_Get (int argc, char *argv[]){
         argnext++;
     }
     hostname = argv[argnext++];
-    port = argv[argnext];
+    port = argv[argnext++];
+    item = argv[argnext];
 
     /*
      * Create an SSL_CTX which we can use to create SSL objects from. We
@@ -217,8 +222,13 @@ int XML_Get (int argc, char *argv[]){
         goto end;
     }
 
+    request_open = (char*)malloc((strlen(request_start) + strlen(item) + strlen(request_mid) + 3));
+    strncpy(request_open, request_start, strlen(request_start)-1);
+    strncat(request_open, item, strlen(item)-1);
+    strncat(request_open, request_mid, strlen(request_mid)-1);
+    
     /* Write an HTTP GET request to the peer */
-    if (!SSL_write_ex(ssl, request_start, strlen(request_start), &written)) {
+    if (!SSL_write_ex(ssl, request_open, strlen(request_open), &written)) {
         printf("Failed to write start of HTTP request\n");
         goto end;
     }
@@ -255,6 +265,7 @@ int XML_Get (int argc, char *argv[]){
 
     cimg_start = "\n<image ";
     cimage = output.substr(output.find("src=\""),  (output.find("\" title=") - (output.find("src=\""))));   // Find the image link for the comic
+    imgurl = cimage.substr(5);
     cimage = cimg_start.append(cimage);
     cimage = cimage.append("\" ");
 
@@ -326,7 +337,7 @@ int XML_Get (int argc, char *argv[]){
 }
 
 int main () {
-    char* get_args[3];
+    char* get_args[4];
 
     // Allocate and assign values to http request function
     get_args[0] = (char*)malloc(sizeof(char)*20);
@@ -338,8 +349,29 @@ int main () {
     get_args[2] = (char*)malloc(sizeof(char)*5);
     strncpy(get_args[2], "443", 5);
 
+    get_args[3] = (char*)malloc(sizeof(char)*10);
+    strncpy(get_args[3], "/rss.xml", 10);
+
     // Call http request function for the specified website
     XML_Get(3, get_args);
+
+    std::cout << std::endl << imgurl << std::endl;
+
+    // // // Allocate and assign values to http request function
+    // get_args[0] = (char*)malloc(sizeof(char)*20);
+    // strncpy(get_args[0], "placeholder_command", 20);
+
+    // get_args[1] = (char*)malloc(sizeof(char)*10);
+    // strncpy(get_args[1], "", 10);
+
+    // get_args[2] = (char*)malloc(sizeof(char)*5);
+    // strncpy(get_args[2], "443", 5);
+
+    // get_args[3] = (char*)malloc(sizeof(char)*10);
+    // strncpy(get_args[3], "", 10);
+
+    // // Call http request function for the specified website
+    // XML_Get(3, get_args);
 
     // Clear allocated memory from the http request function arguments
     for(auto i : get_args) {
